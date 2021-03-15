@@ -1,35 +1,56 @@
-# AI Studio项目迁移模板
+## 背景
+面向中文短文本的实体链指，简称 EL（Entity Linking），是NLP、知识图谱领域的基础任务之一，即对于给定的一个中文短文本（如搜索 Query、微博、对话内容、文章/视频/图片的标题等），EL将其中的实体与给定知识库中对应的实体进行关联。针对中文短文本的实体链指存在很大的挑战，主要原因如下：
+（1）口语化严重，导致实体歧义消解困难；
+（2）短文本上下文语境不丰富，须对上下文语境进行精准理解；
+（3）相比英文，中文由于语言自身的特点，在短文本的链指问题上更有挑战。
 
-![GitHub forks](https://img.shields.io/github/forks/GT-ZhangAcer/AI-Studio-Template?style=for-the-badge) ![GitHub Repo stars](https://img.shields.io/github/stars/GT-ZhangAcer/AI-Studio-Template?style=for-the-badge) 
+### 标注数据
+从自然网页标题、多模标题、搜索query中抽取得到，通过人工众包标注，知识库实体重复率约5%，实体上位概念准确率95.27%，数据集标注准确率95.32%。标注数据集由训练集、验证集和测试集组成，整体标注数据大约10万条左右，数据均通过百度众包标注生成。
 
-这是一个简单的迁移模板，使用者只需在[模板仓库](https://github.com/GT-ZhangAcer/AI-Studio-Template)中点击[use this template](https://github.com/GT-ZhangAcer/AI-Studio-Template/generate)即可创建属于自己的具备前端页面空白Paddle项目。
+### 飞桨动态图
+paddle2.0（paddlepaddle2.0rc）后动态图成为了默认打开的设置。现在paddle1.8的版本需要手动打开。飞桨动态图的编程方式和 pytorch 类似，下面是网络构建的示例：
+![](https://ai-studio-static-online.cdn.bcebos.com/52ae86199e99492faebb51c25e4890a27e22346ee1e2425ca757cc180d5d5e5a)
 
+初始化部分定义了网络内部的子网络，forward 定义了前向计算的逻辑。下面是网络训练的示例：
+![](https://ai-studio-static-online.cdn.bcebos.com/0fc70cc8cd884f39a8d0dc50c23781196bcc28b6bf754021b1398907360cab84)
 
-## 项目结构
+通过 fluid.dygraph.guard() 开启动态图模式，数据需要通过 to_variable 方法转成 Variable （paddle2.0后通过 to_tensor，Tensor 和 Variable 的概念类似）。
+### ERNIE 1.0
+![](https://ai-studio-static-online.cdn.bcebos.com/417b74c5049f4353b65eb4db5356124bb4d9ee650744445abb89741589714ce9)
+![](https://ai-studio-static-online.cdn.bcebos.com/8d20d8f18f584970841561c922d14aa70412b17388664798a3ab791485d22ac0)
 
-### Main分支（Default）
-该分支为主要的开发分支，与项目有关的说明和代码文件可放置于此，在仓库被访问时默认展示该分支。
-```
--|
---LICENSE   开源协议文件，默认为MIT开源协议。
---README.md 项目说明文件，可使用Markdowm编辑器进行编辑。
---requirements.txt Python项目依赖列表
-```  
-### gh-pages分支
-该分支下默认会给出静态页面文件，在使用该模板后将自动生成一个项目介绍网页`https://GitHub昵称.github.io/项目名`，我们只需对该分支下的`index.md`文件进行修改即可操控这个页面。
+### 多任务学习
+多任务训练通过共享编码层的参数，只在顶层或者内部部分增加和任务相关的参数，通过样本批次轮流训练不同的任务或者同时训练多个任务希望编码层可以学到更加一般化的表示。
+#### 联合训练
+多个任务的 Loss 通过加和或者加权和的方式合并为一个 Loss 来进行训练。
+#### 任务抽样
+多个任务按照样本批次轮流训练，因为不同任务的样本量不同便涉及到当下训练批次采用哪个任务样本的问题。常用的方法是按照样本量取平方根后的样本占比作为任务被采取的概率进行抽样。
+## 方法
+### 魔改 ERNIE/BERT
+#### 分层投影
+![](https://ai-studio-static-online.cdn.bcebos.com/81c99263d28c4ac49b6026f4f217b303db45730ba4574ac395146fc282baeffe)
+![](https://ai-studio-static-online.cdn.bcebos.com/4c7e95d2c0b0463a89ec98c9e6467bfacf07f3a3843c4b6ba452f9f41c152429)
 
-## 使用方法
+#### 增加嵌入
+增加嵌入可以引入额外的信息，帮助提高模型的性能。
+**类型嵌入**
+实体链接任务中待链接实体和候选知识库实体进行匹配时，将候选实体的类型作为新增嵌入整合到模型中。
+![](https://ai-studio-static-online.cdn.bcebos.com/31ea5aefe3cb4f84adf567b2f838fa2885ef123666c242ba848441a38ed2a89e)
+![](https://ai-studio-static-online.cdn.bcebos.com/c51b32b5812748a3a3404374cfdfd780d5498c54499246209acaa6cdac4a1e50)
 
-### Step1 使用模板仓库创建一个新的个人仓库
-进入[模板仓库]()主页，获取最新模板或点击[此处](https://github.com/GT-ZhangAcer/PythonRepository-Template/generate)立即创建一个这样的特殊仓库。
-<img src="https://ai-studio-static-online.cdn.bcebos.com/77a8ffd9cd9b4953a39f609bb2b0a4903bc046f354944d5d9ee776676f580095" width="800px">  
-简单填写仓库信息  
-<img src="https://ai-studio-static-online.cdn.bcebos.com/e42d4a7b3a064e788b0761570b19b27e18f19a9eeba44c21abf22d7270e38fda" width="800px">
+### 对抗学习
+对抗学习一般是通过引入对抗样本来提高模型的性能，最初基本是用在图像领域。自然语言处理领域的样本引入不太方便，便有人想到直接对隐层 embedding 进行扰动来达到类似的目的。
+#### fgm
+![](https://ai-studio-static-online.cdn.bcebos.com/eb6cd9c4e38849daafd10e5147aceb8fef47c068702e4b858238ef9ffc95d477)
 
-### Step2 导出ipynb文件并将项目文件上传至个人仓库
-Tips：GitHub普通用户支持最大文件为50M  
-在菜单栏中点击"文件"->"导出为ipynb文件"即可导出该文件。
-<img src="https://bce.bdstatic.com/doc/ai-doc/AISTUDIO/BasicLayout_3ae1ef5.png" width="800px"> 
-<img src="https://ai-studio-static-online.cdn.bcebos.com/81ed71bc5ab74d01ab3ed244b987a08b7f3664baecf4475f8c337a2cbfcb04e5" width="800px">  
-<img src="https://ai-studio-static-online.cdn.bcebos.com/069da53af0ca4cbe8f2de962d2cd3e2d6dbbba9e44d9411bb0bd8dda8a7c1b52" width="800px"> 
+fgm 通过在参数梯度方向上增加扰动来实现。
+## 一些tricks
 
+- 除了用 # 标记实体位置，还可以取实体首位的嵌入拼接用于下游任务。
+## 结果
+利用上面这些方法我们最终取得了排名11的成绩，参加比赛让我们对实体链接这个领域有更深的了解。另外企查查的实际业务中经常要用到实体链接，特别是企业实体，不过我们更多的是采用规则的方法，我们NLP团队参加这次比赛也希望作为一个契机利用深度学习的方法来进一步提高实体链接的性能。具体代码查看：[https://aistudio.baidu.com/aistudio/projectdetail/1416068](https://aistudio.baidu.com/aistudio/projectdetail/1416068)
+## 参考
+
+- [https://aistudio.baidu.com/aistudio/competition/detail/58?_=1611377643901](https://aistudio.baidu.com/aistudio/competition/detail/58?_=1611377643901)
+- [https://bj.bcebos.com/v1/conference/ccks2020/eval_paper/ccks2020_eval_paper_2_8.pdf](https://bj.bcebos.com/v1/conference/ccks2020/eval_paper/ccks2020_eval_paper_2_8.pdf)
+- [https://cloud.tencent.com/developer/news/421041](https://cloud.tencent.com/developer/news/421041)
